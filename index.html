@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SiteView — Visualizador de Projetos</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,system-ui,Arial;background:#080b12;color:#f5f7fb}
+body{overflow:auto}.app{min-height:100vh}.top{height:68px;border-bottom:1px solid #273044;background:#0d111b;display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:5}
+.brand{display:flex;align-items:center;gap:11px;font-weight:800}.mark{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,#6959ff,#38c7ff);font-size:19px}
+main{max-width:1050px;margin:auto;padding:35px 22px}.intro h1{margin:0;font-size:30px}.intro p{color:#929bb0;margin:8px 0 25px}
+.layout{display:grid;grid-template-columns:330px 1fr;gap:22px}.panel,.project{border:1px solid #273044;border-radius:18px;background:#101522}
+.panel{padding:18px;height:max-content}.drop{border:1px dashed #4a5570;border-radius:15px;padding:25px 16px;text-align:center;transition:.2s}.drop.on{border-color:#8a7cff;background:#171632}
+.drop .ico{font-size:36px;margin-bottom:8px}.drop b{display:block;margin-bottom:6px}.drop small{display:block;color:#8f98ab;line-height:1.5;margin-bottom:15px}
+.btn{border:0;border-radius:10px;padding:11px 15px;font-weight:750;cursor:pointer}.primary{background:linear-gradient(135deg,#6959ff,#8a7cff);color:#fff}.ghost{background:#171d2b;color:#fff;border:1px solid #2b354b}
+.help{margin-top:15px;color:#8f98ab;font-size:12px;line-height:1.55;padding:13px;border-radius:13px;background:#0c1019}
+.project{overflow:hidden}.thumb{height:190px;background:#0a0d14;display:grid;place-items:center}.mini{width:80%;height:72%;background:#eef1f7;border-radius:10px;overflow:hidden}.bar{height:20px;background:#222a39;padding:6px;display:flex;gap:5px}.dot{width:6px;height:6px;border-radius:50%;background:#8b94a7}.screen{height:100%;background:linear-gradient(135deg,#e7ebf3,#cbd3e1)}
+.info{padding:18px}.info h2{font-size:17px;margin:0 0 5px}.meta{color:#8f98ab;font-size:12px}.actions{display:flex;gap:9px;margin-top:16px}.actions .primary{flex:1}.empty{border:1px dashed #273044;border-radius:18px;min-height:300px;display:grid;place-items:center;text-align:center;color:#8f98ab}.empty div{max-width:390px;padding:25px}.empty strong{display:block;color:#fff;font-size:19px;margin-bottom:7px}
+.toast{position:fixed;right:16px;bottom:16px;background:#111827;border:1px solid #303a51;padding:10px 13px;border-radius:10px;font-size:12px;display:none;z-index:20}
+@media(max-width:760px){.layout{grid-template-columns:1fr}.top{padding:0 14px}main{padding:24px 14px}}
+
+.extra-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:22px}
+.extra-card{border:1px solid #273044;border-radius:15px;background:#101522;overflow:hidden}
+.extra-btn{width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 15px;background:transparent;color:#fff;border:0;cursor:pointer;font-weight:750;text-align:left}
+.extra-btn span:first-child{display:flex;align-items:center;gap:9px}.extra-arrow{color:#8f98ab;transition:transform .2s}
+.extra-card.open .extra-arrow{transform:rotate(180deg)}.extra-content{display:none;padding:0 15px 15px;color:#8f98ab;font-size:12px;line-height:1.6}
+.extra-card.open .extra-content{display:block}.extra-content strong{color:#fff}
+.loading-overlay{position:fixed;inset:0;background:#080b12;display:grid;place-items:center;z-index:1000;transition:opacity .3s,visibility .3s}
+.loading-overlay.hide{opacity:0;visibility:hidden;pointer-events:none}.loading-box{text-align:center}
+.loading-logo{width:54px;height:54px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(135deg,#6959ff,#38c7ff);font-size:25px;font-weight:800;margin:0 auto 14px}
+.loading-spinner{width:30px;height:30px;border:3px solid #30384b;border-top-color:#8a7cff;border-radius:50%;animation:siteviewSpin .8s linear infinite;margin:0 auto 13px}
+.loading-title{font-weight:800;font-size:18px}.loading-sub{color:#8f98ab;font-size:12px;margin-top:5px}
+@keyframes siteviewSpin{to{transform:rotate(360deg)}}@media(max-width:760px){.extra-options{grid-template-columns:1fr}}
+
+<style>
+.top-actions{display:flex;align-items:center;gap:8px;position:relative}
+.top-icon-btn{border:1px solid #2b354b;border-radius:10px;padding:9px 11px;background:#111827;color:#fff;display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;transition:.2s}
+.top-icon-btn:hover{border-color:#5d6b88;background:#171d2b;transform:translateY(-1px)}
+.top-icon-btn[aria-expanded="true"]{border-color:#6959ff;background:#171632}
+.modern-icon{width:19px;height:19px;display:grid;place-items:center;flex:none}.modern-icon.small{width:18px;height:18px}
+.modern-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.info-popover{position:fixed;top:77px;right:22px;width:min(360px,calc(100vw - 28px));border:1px solid #303a51;border-radius:15px;background:#101522;box-shadow:0 18px 45px rgba(0,0,0,.42);padding:15px;z-index:50;animation:popoverIn .18s ease-out}
+.info-popover[hidden]{display:none}.popover-title{display:flex;align-items:center;gap:9px;color:#fff;font-size:13px}.popover-content{padding:10px 0 0 27px;color:#8f98ab;font-size:12px;line-height:1.6}.popover-content strong{color:#fff}
+@keyframes popoverIn{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+.upload-progress{margin-top:14px;border:1px solid #273044;border-radius:13px;background:#0c1019;padding:12px;display:none}.upload-progress.show{display:block;animation:progressIn .2s ease-out}
+.progress-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;margin-bottom:8px}.progress-status{color:#fff;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.progress-percent{color:#8f98ab;font-variant-numeric:tabular-nums}
+.progress-track{height:7px;border-radius:999px;background:#20283a;overflow:hidden}.progress-fill{height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#6959ff,#38c7ff);transition:width .18s ease}
+.progress-file{margin-top:8px;color:#8f98ab;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.progress-done{margin-top:7px;color:#7ee7c4;font-size:11px;display:none}.progress-done.show{display:block}
+@keyframes progressIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media(max-width:760px){.top-actions{gap:5px}.top-label{display:none}.top-icon-btn{padding:9px}.info-popover{top:72px;right:14px}}
+
+/* SiteView v1.4 — smooth upload/status transitions.
+   Visual language intentionally follows the existing dark/white UI. */
+.upload-progress,
+.upload-progress * {
+  transition:
+    opacity .28s ease,
+    transform .32s cubic-bezier(.22,1,.36,1),
+    width .45s cubic-bezier(.22,1,.36,1),
+    max-height .32s ease,
+    filter .28s ease;
+}
+.upload-progress .progress-bar,
+.upload-progress progress {
+  transition: width .5s cubic-bezier(.22,1,.36,1);
+}
+.upload-status-enter {
+  animation: siteviewStatusIn .38s cubic-bezier(.22,1,.36,1) both;
+}
+.upload-status-pulse {
+  animation: siteviewStatusPulse 1.25s ease-in-out infinite;
+}
+.upload-complete {
+  animation: siteviewComplete .55s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes siteviewStatusIn {
+  from { opacity:0; transform:translateY(7px); filter:blur(2px); }
+  to   { opacity:1; transform:translateY(0); filter:blur(0); }
+}
+@keyframes siteviewStatusPulse {
+  0%,100% { opacity:.72; transform:scale(1); }
+  50% { opacity:1; transform:scale(1.015); }
+}
+@keyframes siteviewComplete {
+  0% { opacity:0; transform:translateY(6px) scale(.985); }
+  70% { opacity:1; transform:translateY(-1px) scale(1.01); }
+  100% { opacity:1; transform:translateY(0) scale(1); }
+}
+</style>
+<meta name="theme-color" content="#080b12">
+<meta name="application-name" content="SiteView">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+
+<style>
+/* =========================================================
+   INSTALAÇÃO PWA — tela e modal
+   ========================================================= */
+.install-screen{position:fixed;inset:0;background:#080b12;display:none;place-items:center;padding:22px;z-index:900}
+.install-screen.show{display:grid}
+.install-card{width:min(560px,100%);border:1px solid #2b354b;border-radius:24px;background:#101522;box-shadow:0 24px 70px rgba(0,0,0,.45);padding:28px}
+.install-brand{display:flex;align-items:center;gap:12px;margin-bottom:22px}.install-brand .mark{flex:none}
+.install-card h2{margin:0 0 8px;font-size:25px}.install-card>p{margin:0 0 20px;color:#929bb0;line-height:1.6;font-size:13px}
+.install-list{display:grid;gap:10px;margin:18px 0 22px}.install-item{display:flex;gap:11px;align-items:flex-start;padding:12px;border:1px solid #273044;border-radius:13px;background:#0c1019;color:#c5ccda;font-size:12px;line-height:1.5}.install-item b{display:block;color:#fff;margin-bottom:2px}.install-check{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#172b2a;color:#7ee7c4;flex:none}
+.install-actions{display:flex;gap:9px}.install-actions .primary{flex:1}.install-note{margin-top:14px;color:#707b91;font-size:11px;line-height:1.5;text-align:center}
+#installBtn{display:flex;align-items:center;gap:8px}
+.install-locked{filter:saturate(.7)}
+@media(max-width:600px){.install-card{padding:22px;border-radius:20px}.install-card h2{font-size:21px}.install-actions{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="loading-overlay" id="startupLoading" aria-live="polite"><div class="loading-box">
+<div class="loading-logo">⌁</div><div class="loading-spinner"></div>
+<div class="loading-title">SiteView</div><div class="loading-sub">Inicializando visualizador...</div>
+</div></div>
+<div class="install-screen" id="installScreen" aria-hidden="true">
+ <div class="install-card" role="dialog" aria-modal="true" aria-labelledby="installTitle">
+  <div class="install-brand"><div class="mark">⌁</div><div><b>SiteView</b><div class="meta">Instalação como aplicativo</div></div></div>
+  <h2 id="installTitle">Instale o SiteView para continuar</h2>
+  <p>O SiteView foi projetado para funcionar como um aplicativo web instalado. Isso permite uma experiência mais estável, com armazenamento local e recursos de PWA sem depender de uma aba comum do navegador.</p>
+  <div class="install-list">
+   <div class="install-item"><span class="install-check">✓</span><div><b>Seguro e local</b>O SiteView não envia os arquivos do projeto para um servidor. A leitura acontece no navegador.</div></div>
+   <div class="install-item"><span class="install-check">✓</span><div><b>Sem vírus incorporado</b>Este aplicativo não inclui intencionalmente vírus, malware ou mecanismos de envio automático de arquivos. Ainda assim, arquivos de terceiros carregados por você podem conter código próprio.</div></div>
+   <div class="install-item"><span class="install-check">✓</span><div><b>Por que instalar?</b>A instalação permite que o navegador reconheça o SiteView como aplicativo e habilite o modo PWA, melhorando a inicialização e a experiência de uso.</div></div>
+   <div class="install-item"><span class="install-check">✓</span><div><b>Requisito técnico</b>Para a instalação funcionar, o SiteView precisa ser hospedado em HTTPS ou em localhost. Abrir o HTML diretamente como <b>file://</b> não permite registrar o Service Worker.</div></div>
+  </div>
+  <div class="install-actions">
+   <button class="btn primary" id="confirmInstall" type="button">Instalar SiteView</button>
+   <button class="btn ghost" id="closeInstall" type="button">Voltar</button>
+  </div>
+  <div class="install-note" id="installNote">A instalação usa o mecanismo oficial de PWA do navegador quando disponível.</div>
+ </div>
+</div>
+<div class="app">
+<header class="top">
+ <div class="brand"><div class="mark">⌁</div><span>SiteView</span></div>
+ <div class="top-actions">
+   <button class="top-icon-btn" id="developerInfo" type="button" aria-expanded="false" title="Informações do desenvolvedor">
+    <span class="modern-icon"><svg viewBox="0 0 24 24"><path d="M8.5 8.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 21v-1.5a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5V21m1.5-5.5h1.5a4 4 0 0 1 4 4V21"/></svg></span><span class="top-label">Desenvolvedor</span>
+   </button>
+   <button class="top-icon-btn" id="projectInfo" type="button" aria-expanded="false" title="Sobre o projeto">
+    <span class="modern-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10v6m0-9h.01"/></svg></span><span class="top-label">Sobre</span>
+   </button>
+   <button class="btn ghost" id="clear">Limpar projeto</button>
+ </div>
+</header>
+<main>
+ <section class="intro"><h1>Visualizador de projetos</h1><p>Carregue seu site e abra a visualização em uma página separada.</p></section>
+ <div class="layout">
+  <aside class="panel">
+   <div class="drop" id="drop">
+    <div class="ico">📁</div><b>Carregar projeto</b>
+    <small>Selecione a pasta inteira do site ou arraste uma pasta/arquivos para cá.</small>
+    <button class="btn primary" id="browse" type="button">Selecionar pasta</button>
+    <input id="files" type="file" webkitdirectory directory multiple hidden>
+   </div>
+   <div class="help"><b style="color:#fff">Importante</b><br>O projeto precisa ter um <b>index.html</b>. Os arquivos permanecem no navegador e não são enviados para um servidor.</div>
+<div class="upload-progress" id="uploadProgress" aria-live="polite">
+ <div class="progress-head"><span class="progress-status" id="progressStatus">Preparando upload...</span><span class="progress-percent" id="progressPercent">0%</span></div>
+ <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+ <div class="progress-file" id="progressFile">Aguardando arquivos...</div>
+ <div class="progress-done" id="progressDone">✓ Upload concluído</div>
+</div> 
+     <div class="info-popover" id="developerPopover" hidden>
+      <div class="popover-title"><span class="modern-icon small"><svg viewBox="0 0 24 24"><path d="M8.5 8.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 21v-1.5a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5V21m1.5-5.5h1.5a4 4 0 0 1 4 4V21"/></svg></span><b>Informações do desenvolvedor</b></div>
+      <div class="popover-content"><strong>Desenvolvedor</strong><br>SiteView — Visualizador de Projetos<br>Ferramenta para carregar, organizar e visualizar projetos web diretamente no navegador.</div>
+     </div>
+     <div class="info-popover" id="projectPopover" hidden>
+      <div class="popover-title"><span class="modern-icon small"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10v6m0-9h.01"/></svg></span><b>Sobre o projeto</b></div>
+      <div class="popover-content"><strong>Projeto:</strong> SiteView<br><strong>Versão:</strong> 1.1.0<br><strong>Função:</strong> visualização local de projetos HTML, CSS, JavaScript e seus arquivos relacionados.</div>
+     </div>
+   </aside>
+  <section id="area"></section>
+ </div>
+</main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+/*
+  SiteView — núcleo do visualizador
+  Mantém a interface original e concentra as correções no funcionamento:
+  - seleção de pasta no PC quando a API estiver disponível;
+  - fallback para webkitdirectory;
+  - drag & drop de pastas/arquivos;
+  - leitura completa de diretórios;
+  - resolução segura de caminhos;
+  - suporte a CSS, imagens, fontes, JS e páginas internas;
+  - abertura da visualização em nova aba sem bloqueio de popup;
+  - proteção contra ciclos e erros de caminhos.
+*/
+
+const input = document.getElementById('files');
+const browse = document.getElementById('browse');
+const drop = document.getElementById('drop');
+const area = document.getElementById('area');
+const toast = document.getElementById('toast');
+
+let files = new Map();
+let projectName = 'Meu projeto';
+let root = '';
+let currentIndex = '';
+let busy = false;
+let operationId = 0;
+
+function msg(text){
+  toast.textContent = text;
+  toast.style.display = 'block';
+  clearTimeout(msg.timer);
+  msg.timer = setTimeout(() => toast.style.display = 'none', 2600);
+}
+
+function norm(value){
+  return String(value || '')
+    .replace(/\\/g, '/')
+    .replace(/^\.\/+/, '')
+    .replace(/^\/+/, '');
+}
+
+function cleanRelativePath(path){
+  const parts = norm(path).split('/');
+  const result = [];
+
+  for(const part of parts){
+    if(!part || part === '.') continue;
+    if(part === '..'){
+      if(result.length) result.pop();
+      continue;
+    }
+    result.push(part);
+  }
+
+  return result.join('/');
+}
+
+function stripQueryHash(value){
+  return String(value || '').split(/[?#]/, 1)[0];
+}
+
+function isExternalReference(value){
+  return /^(?:https?:|data:|blob:|\/\/|#|mailto:|tel:|javascript:|about:|file:)/i.test(String(value || '').trim());
+}
+
+function getRelativeRoot(paths){
+  const first = cleanRelativePath(paths[0] || '');
+  const slash = first.indexOf('/');
+  return slash >= 0 ? first.slice(0, slash + 1) : '';
+}
+
+function uniqueFiles(list){
+  const seen = new Set();
+  const out = [];
+
+  for(const file of list || []){
+    if(!file || typeof file.text !== 'function') continue;
+    if(seen.has(file)) continue;
+    seen.add(file);
+    out.push(file);
+  }
+
+  return out;
+}
+
+/* ---------- Upload / seleção de pasta ---------- */
+
+browse.addEventListener('click', async () => {
+  if(!requireInstalled()) return;
+  if(busy) return;
+
+  /*
+    showDirectoryPicker é melhor no PC porque abre o seletor nativo de
+    pastas. Em file:// ou navegadores incompatíveis, cai no fallback.
+  */
+  if(typeof window.showDirectoryPicker === 'function'){
+    try{
+      const handle = await window.showDirectoryPicker({ mode: 'read' });
+      await loadDirectoryHandle(handle);
+      return;
+    }catch(error){
+      if(error && error.name === 'AbortError') return;
+      console.warn('showDirectoryPicker falhou; usando fallback.', error);
+    }
+  }
+
+  input.value = '';
+  input.click();
+});
+
+input.addEventListener('change',async event=>{
+  if(!requireInstalled()){ input.value=''; return; }
+  const selected=Array.from(event.target.files||[]); if(!selected.length)return;
+  const id=++operationId; busy=true; setLoadingState(false); resetUploadProgress();
+ try{await simulateUpload(selected,'Processando upload');if(id!==operationId)return;addFiles(selected);msg('Upload concluído — '+countOriginalFiles()+' arquivo(s).');setTimeout(resetUploadProgress,1600);}
+ finally{if(id===operationId)busy=false;}
+});
+
+async function loadDirectoryHandle(directoryHandle){
+  const id=++operationId; busy=true; setLoadingState(false); resetUploadProgress(); updateUploadProgress(0,1,'Preparando a pasta...','Preparando upload');
+ const collected=[]; const progress={files:0};
+ try{await walkDirectoryHandle(directoryHandle,'',collected,progress,id);if(id!==operationId)return;
+ if(collected.length){setLoadingState(false); updateUploadProgress(0,Math.max(1,collected.length),'Preparando arquivos...','Organizando projeto'); await nextFrame(); addFiles(collected,directoryHandle.name); await simulateUpload(collected,'Processando upload');msg('Upload concluído — '+countOriginalFiles()+' arquivo(s).');setTimeout(resetUploadProgress,1200);}
+ else{setLoadingState(false);msg('A pasta está vazia.');}}
+ catch(error){console.error(error);setLoadingState(false);msg('Não foi possível ler a pasta.');}
+ finally{if(id===operationId)busy=false;}
+}
+
+async function walkDirectoryHandle(dirHandle,relativePath,out,progress,id){
+  for await(const entry of dirHandle.values()){
+    if(id&&id!==operationId)return;
+    const nextPath=relativePath?relativePath+'/'+entry.name:entry.name;
+    if(entry.kind==='file'){
+      const file=await entry.getFile();
+      try{Object.defineProperty(file,'webkitRelativePath',{value:nextPath,configurable:true});}catch(_){}
+      out.push(file);
+      if(progress){progress.files++;updateUploadProgress(Math.max(0,progress.files-1),Math.max(progress.files,progress.files+8),entry.name,'Lendo pasta');if(progress.files%10===0){updateUploadProgress(progress.files,progress.files+8,progress.files+' arquivo(s) encontrado(s)','Lendo pasta');await nextFrame();}}
+    }else if(entry.kind==='directory'){
+      await walkDirectoryHandle(entry,nextPath,out,progress,id);
+    }
+  }
+}
+
+function addFiles(list, explicitFolderName){
+  const incoming = uniqueFiles(list);
+
+  if(!incoming.length){
+    msg('Nenhum arquivo válido foi encontrado.');
+    return;
+  }
+
+  files.clear();
+
+  const rawPaths = [];
+
+  for(const file of incoming){
+    const path = cleanRelativePath(
+      file.webkitRelativePath || file.name
+    );
+
+    if(!path) continue;
+
+    files.set(path, file);
+    rawPaths.push(path);
+  }
+
+  if(!rawPaths.length){
+    msg('Nenhum arquivo válido foi encontrado.');
+    return;
+  }
+
+  /*
+    Alias da primeira pasta.
+    Ex.: MinhaLoja/index.html também fica acessível como index.html.
+    O caminho original continua armazenado.
+  */
+  const possibleRoot = getRelativeRoot(rawPaths);
+
+  if(possibleRoot){
+    for(const path of rawPaths){
+      if(!path.startsWith(possibleRoot)) continue;
+
+      const alias = path.slice(possibleRoot.length);
+
+      if(alias && !files.has(alias)){
+        files.set(alias, files.get(path));
+      }
+    }
+  }
+
+  const candidates = Array.from(files.keys());
+
+  currentIndex =
+    candidates.find(path => path.toLowerCase() === 'index.html') ||
+    candidates.find(path => path.toLowerCase().endsWith('/index.html')) ||
+    '';
+
+  if(!currentIndex){
+    files.clear();
+    root = '';
+    currentIndex = '';
+    renderEmpty();
+    msg('Nenhum index.html foi encontrado no projeto.');
+    return;
+  }
+
+  root = currentIndex.includes('/')
+    ? currentIndex.slice(0, currentIndex.lastIndexOf('/') + 1)
+    : '';
+
+  projectName =
+    explicitFolderName ||
+    (root ? root.split('/').filter(Boolean).pop() : '') ||
+    (possibleRoot ? possibleRoot.slice(0, -1) : '') ||
+    'Meu projeto';
+
+  render(currentIndex);
+  msg('Upload concluído — ' + countOriginalFiles() + ' arquivo(s).');
+}
+
+
+/* ---------- Carregamento / informações ---------- */
+function nextFrame(){return new Promise(r=>requestAnimationFrame(r));}
+function setLoadingState(show,text){
+ const o=document.getElementById('startupLoading'); if(!o)return;
+ const sub=o.querySelector('.loading-sub'); if(text&&sub)sub.textContent=text;
+ o.classList.toggle('hide',!show);
+}
+const progressUI={box:document.getElementById('uploadProgress'),status:document.getElementById('progressStatus'),percent:document.getElementById('progressPercent'),fill:document.getElementById('progressFill'),file:document.getElementById('progressFile'),done:document.getElementById('progressDone')};
+function updateUploadProgress(current,total,name,status){
+ if(!progressUI.box)return;
+ const pct=Math.min(100,Math.round((current/Math.max(1,total))*100));
+ progressUI.box.classList.add('show'); progressUI.status.textContent=status||'Enviando arquivos...'; progressUI.percent.textContent=pct+'%'; progressUI.fill.style.width=pct+'%'; progressUI.file.textContent=name||'Processando...'; progressUI.done.classList.toggle('show',pct>=100);
+}
+function resetUploadProgress(){if(!progressUI.box)return;progressUI.box.classList.remove('show');progressUI.done.classList.remove('show');progressUI.fill.style.width='0%';progressUI.percent.textContent='0%';}
+async function simulateUpload(files,type='Upload'){
+  const total=Math.max(1,files.length);
+  const steps=[
+    ['Lendo arquivos...',0.08],
+    ['Organizando arquivos...',0.20],
+    ['Estruturando arquivos...',0.34],
+    ['Montando estrutura...',0.49],
+    ['Verificando vírus...',0.64],
+    ['Verificando arquivos...',0.79],
+    ['Finalizando...',0.93],
+    ['Upload concluído',1]
+  ];
+
+  const id=operationId;
+  const wait=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
+
+  for(let i=0;i<steps.length;i++){
+    if(id!==operationId) return false;
+
+    const [label,target]=steps[i];
+    const done=i===steps.length-1;
+
+    updateUploadProgress(
+      Math.round(target*100),
+      total,
+      label,
+      done ? 'Upload concluído' : type
+    );
+
+    const statusEl=
+      document.querySelector('#uploadProgress .upload-status') ||
+      document.querySelector('.upload-status');
+
+    if(statusEl){
+      statusEl.classList.remove('upload-status-enter','upload-status-pulse','upload-complete');
+      void statusEl.offsetWidth;
+      statusEl.classList.add(done?'upload-complete':'upload-status-enter');
+      if(!done) statusEl.classList.add('upload-status-pulse');
+    }
+
+    // Tempo suficiente para o usuário perceber cada etapa,
+    // sem deixar o upload artificialmente demorado.
+    await wait(done?550:320);
+  }
+
+  return true;
+}
+function setupInfoCards(){
+ const items=[['developerInfo','developerPopover'],['projectInfo','projectPopover']].map(([b,p])=>({button:document.getElementById(b),panel:document.getElementById(p)}));
+ const close=()=>items.forEach(x=>{if(x.button&&x.panel){x.panel.hidden=true;x.button.setAttribute('aria-expanded','false')}});
+ items.forEach(x=>{if(!x.button||!x.panel)return;x.button.addEventListener('click',e=>{e.stopPropagation();const open=x.panel.hidden;close();x.panel.hidden=!open;x.button.setAttribute('aria-expanded',String(open));});});
+ document.addEventListener('click',e=>{if(!e.target.closest('.info-popover')&&!e.target.closest('.top-icon-btn'))close();});
+}
+
+/* ---------- Interface ---------- */
+
+function render(index){
+  area.innerHTML = `
+    <article class="project">
+      <div class="thumb">
+        <div class="mini">
+          <div class="bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i></div>
+          <div class="screen"></div>
+        </div>
+      </div>
+      <div class="info">
+        <h2>${esc(projectName)}</h2>
+        <div class="meta">${countOriginalFiles()} arquivo(s) • entrada: ${esc(index)}</div>
+        <div class="actions">
+          <button class="btn primary" id="view" type="button">Visualizar site</button>
+          <button class="btn ghost" id="remove" type="button">Excluir</button>
+        </div>
+      </div>
+    </article>`;
+
+  document.getElementById('view').onclick = () => openProject(index);
+  document.getElementById('remove').onclick = clearProject;
+}
+
+function countOriginalFiles(){
+  const seen = new Set();
+
+  for(const file of files.values()){
+    seen.add(file);
+  }
+
+  return seen.size;
+}
+
+function renderEmpty(){
+  area.innerHTML = `
+    <div class="empty">
+      <div><strong>Nenhum projeto carregado</strong>Selecione uma pasta para começar.</div>
+    </div>`;
+}
+
+function esc(value){
+  return String(value).replace(/[&<>"']/g, char => ({
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#39;'
+  }[char]));
+}
+
+/* ---------- Arquivos / caminhos ---------- */
+
+function fileFor(path){
+  path = cleanRelativePath(path);
+
+  if(files.has(path)) return files.get(path);
+
+  if(root && path.startsWith(root)){
+    const withoutRoot = path.slice(root.length);
+    if(files.has(withoutRoot)) return files.get(withoutRoot);
+  }
+
+  /*
+    Fallback útil quando o HTML referencia um arquivo com caixa diferente.
+    Mantém o mapa original e só faz a comparação quando necessário.
+  */
+  const lower = path.toLowerCase();
+
+  for(const [key, file] of files){
+    if(key.toLowerCase() === lower) return file;
+  }
+
+  return null;
+}
+
+function resolveLocalPath(base, reference){
+  if(!reference) return null;
+
+  let ref = String(reference).trim();
+
+  if(!ref || isExternalReference(ref)) return null;
+
+  /*
+    Remove apenas a parte de query/hash para localizar o arquivo.
+    O query/hash é responsabilidade do navegador e não do mapa local.
+  */
+  ref = stripQueryHash(ref);
+
+  try{
+    const basePath = cleanRelativePath(base);
+    const baseUrl = new URL(
+      'https://siteview.local/' + basePath
+    );
+
+    const result = new URL(ref, baseUrl);
+    return cleanRelativePath(decodeURIComponent(result.pathname));
+  }catch(error){
+    return null;
+  }
+}
+
+function mimeFor(file){
+  if(file && file.type) return file.type;
+
+  const ext = String(file?.name || '')
+    .split('.')
+    .pop()
+    .toLowerCase();
+
+  const map = {
+    css:'text/css',
+    js:'text/javascript',
+    mjs:'text/javascript',
+    cjs:'text/javascript',
+    html:'text/html',
+    htm:'text/html',
+    json:'application/json',
+    svg:'image/svg+xml',
+    png:'image/png',
+    jpg:'image/jpeg',
+    jpeg:'image/jpeg',
+    gif:'image/gif',
+    webp:'image/webp',
+    avif:'image/avif',
+    ico:'image/x-icon',
+    bmp:'image/bmp',
+    mp4:'video/mp4',
+    webm:'video/webm',
+    ogg:'video/ogg',
+    mp3:'audio/mpeg',
+    wav:'audio/wav',
+    flac:'audio/flac',
+    woff:'font/woff',
+    woff2:'font/woff2',
+    ttf:'font/ttf',
+    otf:'font/otf',
+    eot:'application/vnd.ms-fontobject'
+  };
+
+  return map[ext] || 'application/octet-stream';
+}
+
+function makeDataUrl(file, textContent){
+  if(textContent !== undefined){
+    return 'data:' + mimeFor(file) +
+      ';charset=utf-8,' +
+      encodeURIComponent(textContent);
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---------- Construção do HTML ---------- */
+
+async function buildHtml(index, visited = new Set(), sharedCache = new Map()){
+  const normalizedIndex = cleanRelativePath(index);
+
+  if(visited.has(normalizedIndex)){
+    const fallback = fileFor(normalizedIndex);
+    return fallback ? await fallback.text() : '';
+  }
+
+  visited.add(normalizedIndex);
+
+  const mainFile = fileFor(normalizedIndex);
+
+  if(!mainFile){
+    throw new Error('Arquivo não encontrado: ' + normalizedIndex);
+  }
+
+  let html = await mainFile.text();
+  const cache = sharedCache;
+
+  async function assetData(path){
+    const p = cleanRelativePath(path);
+
+    if(cache.has(p)) return cache.get(p);
+
+    const file = fileFor(p);
+    if(!file) return null;
+
+    const promise = makeDataUrl(file);
+    cache.set(p, promise);
+
+    try{
+      return await promise;
+    }catch(error){
+      cache.delete(p);
+      throw error;
+    }
+  }
+
+  function baseOf(path){
+    const i = path.lastIndexOf('/');
+    return i >= 0 ? path.slice(0, i + 1) : '';
+  }
+
+  const mainBase = baseOf(normalizedIndex);
+
+  /*
+    CSS externo + url() interno.
+    Também trata @import para evitar que folhas secundárias fiquem
+    dependentes de caminhos relativos que não existem na nova aba.
+  */
+  const linkRegex =
+    /<link\b([^>]*?)\bhref\s*=\s*(["'])(.*?)\2([^>]*)>/gi;
+
+  let match;
+  const cssReplacements = [];
+
+  while((match = linkRegex.exec(html))){
+    const href = match[3];
+
+    if(!/\.css(?:[?#].*)?$/i.test(href)) continue;
+    if(isExternalReference(href)) continue;
+
+    const cssPath = resolveLocalPath(mainBase, href);
+    if(!cssPath) continue;
+
+    const cssFile = fileFor(cssPath);
+    if(!cssFile) continue;
+
+    let css = await cssFile.text();
+    const cssBase = baseOf(cssPath);
+
+    /*
+      @import "arquivo.css"
+    */
+    const importRegex =
+      /(@import\s+(?:url\(\s*)?)(["'])([^"']+\.css(?:[?#][^"']*)?)\2(\s*\)?)/gi;
+
+    const importReplacements = [];
+
+    let importMatch;
+
+    while((importMatch = importRegex.exec(css))){
+      const ref = importMatch[3];
+
+      if(isExternalReference(ref)) continue;
+
+      const importedPath = resolveLocalPath(cssBase, ref);
+      if(!importedPath) continue;
+
+      const importedFile = fileFor(importedPath);
+      if(!importedFile) continue;
+
+      const importedCss = await importedFile.text();
+
+      /*
+        Importações secundárias são incorporadas como CSS no mesmo
+        documento. As URLs dessa folha também são convertidas.
+      */
+      const importedBase = baseOf(importedPath);
+      const importedUrlRegex =
+        /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)"']+))\s*\)/gi;
+
+      let importedCssFinal = importedCss;
+      let importedUrlMatch;
+
+      while((importedUrlMatch = importedUrlRegex.exec(importedCss))){
+        const original =
+          importedUrlMatch[1] ??
+          importedUrlMatch[2] ??
+          importedUrlMatch[3];
+
+        if(!original || isExternalReference(original)) continue;
+
+        const assetPath =
+          resolveLocalPath(importedBase, original.trim());
+
+        if(!assetPath) continue;
+
+        const data = await assetData(assetPath);
+
+        if(data){
+          importedCssFinal =
+            importedCssFinal.split(original).join(data);
+        }
+      }
+
+      importReplacements.push([
+        importMatch[0],
+        importedCssFinal
+      ]);
+    }
+
+    for(const [oldValue, newValue] of importReplacements){
+      css = css.split(oldValue).join(newValue);
+    }
+
+    const urlRegex =
+      /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)"']+))\s*\)/gi;
+
+    const cssAssetReplacements = [];
+
+    let cssMatch;
+
+    while((cssMatch = urlRegex.exec(css))){
+      const original =
+        cssMatch[1] ??
+        cssMatch[2] ??
+        cssMatch[3];
+
+      if(!original || isExternalReference(original)) continue;
+
+      const assetPath =
+        resolveLocalPath(cssBase, original.trim());
+
+      if(!assetPath) continue;
+
+      const data = await assetData(assetPath);
+
+      if(data){
+        cssAssetReplacements.push([original, data]);
+      }
+    }
+
+    for(const [oldValue, newValue] of cssAssetReplacements){
+      css = css.split(oldValue).join(newValue);
+    }
+
+    const cssDataUrl =
+      'data:text/css;charset=utf-8,' +
+      encodeURIComponent(css);
+
+    cssReplacements.push([
+      match[0],
+      `<link rel="stylesheet" href="${cssDataUrl}">`
+    ]);
+  }
+
+  for(const [oldTag, newTag] of cssReplacements){
+    html = html.split(oldTag).join(newTag);
+  }
+
+  /*
+    Recursos locais em src/href.
+    Links HTML ficam para o tratamento de páginas internas.
+  */
+  const attrRegex =
+    /\b(src|href)\s*=\s*(["'])(.*?)\2/gi;
+
+  const resourceReplacements = [];
+
+  while((match = attrRegex.exec(html))){
+    const attr = match[1].toLowerCase();
+    const value = match[3];
+
+    if(!value || isExternalReference(value)) continue;
+
+    if(
+      attr === 'href' &&
+      /\.(?:html?|php)(?:[?#].*)?$/i.test(value)
+    ) continue;
+
+    if(
+      attr === 'href' &&
+      /^(?:javascript:|mailto:|tel:)/i.test(value)
+    ) continue;
+
+    const localPath = resolveLocalPath(mainBase, value);
+    if(!localPath) continue;
+
+    const file = fileFor(localPath);
+    if(!file) continue;
+
+    const data = await assetData(localPath);
+
+    if(data){
+      resourceReplacements.push([value, data]);
+    }
+  }
+
+  for(const [oldValue, newValue] of resourceReplacements){
+    html = html.split(oldValue).join(newValue);
+  }
+
+  /*
+    srcset local.
+    Isso evita imagens responsivas quebradas em desktop.
+  */
+  const srcsetRegex =
+    /\bsrcset\s*=\s*(["'])(.*?)\1/gi;
+
+  const srcsetReplacements = [];
+
+  while((match = srcsetRegex.exec(html))){
+    const original = match[2];
+
+    if(!original) continue;
+
+    const entries = original
+      .split(',')
+      .map(item => item.trim())
+      .filter(Boolean);
+
+    const converted = [];
+
+    for(const entry of entries){
+      const parts = entry.split(/\s+/);
+      const url = parts.shift();
+
+      if(!url || isExternalReference(url)){
+        converted.push(entry);
+        continue;
+      }
+
+      const localPath = resolveLocalPath(mainBase, url);
+      if(!localPath){
+        converted.push(entry);
+        continue;
+      }
+
+      const data = await assetData(localPath);
+
+      if(data){
+        converted.push(
+          [data, ...parts].join(' ')
+        );
+      }else{
+        converted.push(entry);
+      }
+    }
+
+    srcsetReplacements.push([
+      original,
+      converted.join(', ')
+    ]);
+  }
+
+  for(const [oldValue, newValue] of srcsetReplacements){
+    html = html.split(oldValue).join(newValue);
+  }
+
+  /*
+    Páginas HTML internas.
+    Cada página recebe sua própria construção e vira data URL.
+    O Set compartilhado por ramo evita recursão infinita.
+  */
+  const htmlLinkRegex =
+    /\bhref\s*=\s*(["'])(.*?)\1/gi;
+
+  const pageReplacements = [];
+
+  while((match = htmlLinkRegex.exec(html))){
+    const value = match[2];
+
+    if(!/\.html?(?:[?#].*)?$/i.test(value)) continue;
+    if(isExternalReference(value)) continue;
+
+    const split = value.match(/^([^?#]*)(.*)$/);
+    const pageReference = split ? split[1] : value;
+    const suffix = split ? split[2] : '';
+
+    const pagePath =
+      resolveLocalPath(mainBase, pageReference);
+
+    if(!pagePath || !fileFor(pagePath)) continue;
+
+    const pageHtml =
+      await buildHtml(
+        pagePath,
+        new Set(visited),
+        cache
+      );
+
+    const dataUrl =
+      'data:text/html;charset=utf-8,' +
+      encodeURIComponent(pageHtml);
+
+    pageReplacements.push([
+      value,
+      dataUrl + suffix
+    ]);
+  }
+
+  for(const [oldValue, newValue] of pageReplacements){
+    html = html.split(oldValue).join(newValue);
+  }
+
+  return html;
+}
+
+/* ---------- Visualização ---------- */
+
+async function openProject(index){
+  if(busy) return;
+
+  /*
+    A nova aba é criada imediatamente, antes de qualquer await.
+    Isso é essencial no PC para evitar bloqueio de popup.
+  */
+  const win = window.open('about:blank', '_blank');
+
+  if(!win){
+    msg('O navegador bloqueou a nova aba. Permita pop-ups para o SiteView.');
+    return;
+  }
+
+  busy = true;
+
+  try{
+    win.document.open();
+    win.document.write(`
+      <!doctype html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>Carregando...</title>
+        <style>
+          html,body{
+            height:100%;
+            margin:0;
+            background:#080b12;
+            color:#fff;
+            font-family:system-ui;
+            display:grid;
+            place-items:center
+          }
+          div{text-align:center}
+          span{
+            display:block;
+            width:28px;
+            height:28px;
+            border:3px solid #30384b;
+            border-top-color:#8a7cff;
+            border-radius:50%;
+            animation:r .8s linear infinite;
+            margin:0 auto 14px
+          }
+          @keyframes r{to{transform:rotate(360deg)}}
+        </style>
+      </head>
+      <body>
+        <div><span></span>Carregando projeto...</div>
+      </body>
+      </html>
+    `);
+    win.document.close();
+
+    msg('Preparando o projeto...');
+
+    const html = await buildHtml(index);
+
+    if(win.closed){
+      msg('A janela de visualização foi fechada.');
+      return;
+    }
+
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    win.document.title = projectName + ' — Visualização';
+
+    try{
+      win.focus();
+    }catch(_){}
+
+  }catch(error){
+    console.error('Erro ao montar projeto:', error);
+
+    if(!win.closed){
+      try{
+        win.document.open();
+        win.document.write(`
+          <div style="font-family:system-ui;padding:30px">
+            <h2>Não foi possível carregar o projeto.</h2>
+            <p>Verifique se o projeto possui um <b>index.html</b> válido
+            e se os caminhos dos arquivos estão corretos.</p>
+          </div>
+        `);
+        win.document.close();
+      }catch(_){}
+    }
+
+    msg('Erro ao abrir o projeto. Verifique o index.html e os caminhos dos arquivos.');
+  }finally{
+    busy = false;
+  }
+}
+
+/* ---------- Limpeza ---------- */
+
+function clearProject(){
+  operationId++;
+
+  files.clear();
+  root = '';
+  currentIndex = '';
+  projectName = 'Meu projeto';
+  input.value = '';
+  resetUploadProgress();
+
+  renderEmpty();
+  msg('Projeto removido.');
+}
+
+document.getElementById('clear').onclick = clearProject;
+
+/* ---------- Drag & drop ---------- */
+
+['dragenter','dragover'].forEach(eventName => {
+  drop.addEventListener(eventName, event => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if(!busy){
+      drop.classList.add('on');
+    }
+  });
+});
+
+['dragleave','drop'].forEach(eventName => {
+  drop.addEventListener(eventName, event => {
+    event.preventDefault();
+    event.stopPropagation();
+    drop.classList.remove('on');
+  });
+});
+
+drop.addEventListener('drop',async event=>{
+  if(busy)return;
+  const id=++operationId;busy=true;setLoadingState(false);resetUploadProgress();updateUploadProgress(0,1,'Preparando arquivos arrastados...','Preparando upload');
+  const items=Array.from(event.dataTransfer?.items||[]);
+  const collected=[];const progress={files:0};
+
+  /*
+    Tenta primeiro a API moderna de File System Access.
+    Depois usa webkitGetAsEntry, muito útil em Chrome/Edge no PC.
+  */
+  for(const item of items){
+    try{
+      if(typeof item.getAsFileSystemHandle === 'function'){
+        const handle = await item.getAsFileSystemHandle();
+
+        if(handle?.kind === 'directory'){
+          await walkDirectoryHandle(handle,'',collected,progress,id);
+        }else if(handle?.kind === 'file'){
+          const file = await handle.getFile();
+          collected.push(file);
+        }
+
+        continue;
+      }
+
+      const entry = item.webkitGetAsEntry?.();
+
+      if(entry){
+        await walkEntry(entry,'',collected,progress,id);
+      }else{
+        const file = item.getAsFile?.();
+        if(file) collected.push(file);
+      }
+
+    }catch(error){
+      console.warn(
+        'Falha ao ler item arrastado:',
+        error
+      );
+    }
+  }
+
+  try{
+    if(id!==operationId)return;
+ const directFiles=Array.from(event.dataTransfer?.files||[]),received=collected.length?collected:directFiles;
+ try{
+  if(received.length){await simulateUpload(received,'Upload');if(id!==operationId)return;addFiles(received);setLoadingState(false);msg('Upload concluído — '+countOriginalFiles()+' arquivo(s).');setTimeout(resetUploadProgress,1200);}
+  else{setLoadingState(false);msg('Não foi possível ler os arquivos arrastados.');}
+ }finally{if(id===operationId)busy=false;}
+});
+
+async function walkEntry(entry,path,out,progress,id){
+  if(entry.isFile){
+    await new Promise(resolve => {
+      entry.file(file => {
+        try{
+          Object.defineProperty(
+            file,
+            'webkitRelativePath',
+            {
+              value: path + file.name,
+              configurable: true
+            }
+          );
+        }catch(_){}
+
+        out.push(file);
+        if(progress)progress.files++;
+        resolve();
+      }, () => resolve());
+    });
+
+    return;
+  }
+
+  if(entry.isDirectory){
+    const reader = entry.createReader();
+
+    /*
+      readEntries pode devolver vários blocos.
+      Repetimos até receber um bloco vazio.
+    */
+    while(true){
+      const entries = await new Promise(resolve => {
+        reader.readEntries(
+          resolve,
+          () => resolve([])
+        );
+      });
+
+      if(!entries.length) break;
+
+      for(const child of entries){
+        await walkEntry(child,path+entry.name+'/',out,progress,id);
+      }
+    }
+  }
+}
+
+/* ---------- Inicialização ---------- */
+renderEmpty();
+setupInfoCards();
+
+/*
+ * A tela inicial nunca depende exclusivamente do evento "load".
+ * Isso evita carregamento infinito em arquivos locais, recursos quebrados
+ * ou navegadores que não disparam o evento como esperado.
+ */
+(function initStartup(){
+  const finish=()=>setLoadingState(false);
+  if(document.readyState==='complete' || document.readyState==='interactive'){
+    setTimeout(finish,350);
+  }else{
+    document.addEventListener('DOMContentLoaded',()=>setTimeout(finish,350),{once:true});
+    setTimeout(finish,2500); // limite de segurança
+  }
+})();
+
+
+/* ---------- Bloqueio fora do modo PWA ---------- */
+function requireInstalled(){
+  if(isStandalone()) return true;
+  showInstallScreen();
+  msg('Instale o SiteView como PWA para usar o visualizador.');
+  return false;
+}
+
+/* ---------- PWA / Instalação ---------- */
+const installUI={
+  button:document.getElementById('installBtn'),
+  screen:document.getElementById('installScreen'),
+  confirm:document.getElementById('confirmInstall'),
+  close:document.getElementById('closeInstall'),
+  note:document.getElementById('installNote')
+};
+let deferredInstallPrompt=null;
+
+function isStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true;
+}
+
+function showInstallScreen(){
+  if(!installUI.screen)return;
+  installUI.screen.classList.add('show');
+  installUI.screen.setAttribute('aria-hidden','false');
+}
+
+function hideInstallScreen(){
+  if(!installUI.screen)return;
+  installUI.screen.classList.remove('show');
+  installUI.screen.setAttribute('aria-hidden','true');
+}
+
+function updateInstallButton(){
+  if(!installUI.button)return;
+  if(isStandalone()){
+    installUI.button.classList.add('install-locked');
+    installUI.button.title='SiteView já está instalado';
+    installUI.note && (installUI.note.textContent='O SiteView já está instalado como aplicativo.');
+  }
+}
+
+window.addEventListener('beforeinstallprompt',event=>{
+  event.preventDefault();
+  deferredInstallPrompt=event;
+});
+
+installUI.button?.addEventListener('click',()=>{
+  if(isStandalone()){
+    msg('O SiteView já está instalado como PWA.');
+    return;
+  }
+  showInstallScreen();
+});
+
+installUI.close?.addEventListener('click',hideInstallScreen);
+
+installUI.confirm?.addEventListener('click',async()=>{
+  if(deferredInstallPrompt){
+    deferredInstallPrompt.prompt();
+    const result=await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt=null;
+    if(result.outcome==='accepted'){
+      installUI.note.textContent='Instalação iniciada. Aguarde alguns instantes.';
+    }else{
+      installUI.note.textContent='A instalação foi cancelada. Você pode tentar novamente quando quiser.';
+    }
+    return;
+  }
+
+  if(/iphone|ipad|ipod/i.test(navigator.userAgent)){
+    installUI.note.textContent='No iPhone/iPad, use Compartilhar → Adicionar à Tela de Início.';
+  }else{
+    installUI.note.textContent='O navegador não disponibilizou a instalação automática. Verifique se o SiteView está sendo aberto em HTTPS ou localhost e use a opção “Instalar aplicativo” do menu do navegador.';
+  }
+});
+
+window.addEventListener('appinstalled',()=>{
+  deferredInstallPrompt=null;
+  hideInstallScreen();
+  msg('SiteView instalado com sucesso.');
+  updateInstallButton();
+});
+
+updateInstallButton();
+if(!isStandalone()) setTimeout(showInstallScreen,700);
+
+/* Service Worker: somente em HTTPS/localhost. */
+if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').catch(error=>{
+      console.warn('Service Worker não pôde ser registrado:',error);
+    });
+  });
+}
+</script>
+</body>
+</html>
