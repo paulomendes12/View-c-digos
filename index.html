@@ -48,44 +48,6 @@ main{max-width:1050px;margin:auto;padding:35px 22px}.intro h1{margin:0;font-size
 .progress-file{margin-top:8px;color:#8f98ab;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.progress-done{margin-top:7px;color:#7ee7c4;font-size:11px;display:none}.progress-done.show{display:block}
 @keyframes progressIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 @media(max-width:760px){.top-actions{gap:5px}.top-label{display:none}.top-icon-btn{padding:9px}.info-popover{top:72px;right:14px}}
-
-/* SiteView v1.4 — smooth upload/status transitions.
-   Visual language intentionally follows the existing dark/white UI. */
-.upload-progress,
-.upload-progress * {
-  transition:
-    opacity .28s ease,
-    transform .32s cubic-bezier(.22,1,.36,1),
-    width .45s cubic-bezier(.22,1,.36,1),
-    max-height .32s ease,
-    filter .28s ease;
-}
-.upload-progress .progress-bar,
-.upload-progress progress {
-  transition: width .5s cubic-bezier(.22,1,.36,1);
-}
-.upload-status-enter {
-  animation: siteviewStatusIn .38s cubic-bezier(.22,1,.36,1) both;
-}
-.upload-status-pulse {
-  animation: siteviewStatusPulse 1.25s ease-in-out infinite;
-}
-.upload-complete {
-  animation: siteviewComplete .55s cubic-bezier(.22,1,.36,1) both;
-}
-@keyframes siteviewStatusIn {
-  from { opacity:0; transform:translateY(7px); filter:blur(2px); }
-  to   { opacity:1; transform:translateY(0); filter:blur(0); }
-}
-@keyframes siteviewStatusPulse {
-  0%,100% { opacity:.72; transform:scale(1); }
-  50% { opacity:1; transform:scale(1.015); }
-}
-@keyframes siteviewComplete {
-  0% { opacity:0; transform:translateY(6px) scale(.985); }
-  70% { opacity:1; transform:translateY(-1px) scale(1.01); }
-  100% { opacity:1; transform:translateY(0) scale(1); }
-}
 </style>
 <meta name="theme-color" content="#080b12">
 <meta name="application-name" content="SiteView">
@@ -415,52 +377,16 @@ function updateUploadProgress(current,total,name,status){
  progressUI.box.classList.add('show'); progressUI.status.textContent=status||'Enviando arquivos...'; progressUI.percent.textContent=pct+'%'; progressUI.fill.style.width=pct+'%'; progressUI.file.textContent=name||'Processando...'; progressUI.done.classList.toggle('show',pct>=100);
 }
 function resetUploadProgress(){if(!progressUI.box)return;progressUI.box.classList.remove('show');progressUI.done.classList.remove('show');progressUI.fill.style.width='0%';progressUI.percent.textContent='0%';}
-async function simulateUpload(files,type='Upload'){
-  const total=Math.max(1,files.length);
-  const steps=[
-    ['Lendo arquivos...',0.08],
-    ['Organizando arquivos...',0.20],
-    ['Estruturando arquivos...',0.34],
-    ['Montando estrutura...',0.49],
-    ['Verificando vírus...',0.64],
-    ['Verificando arquivos...',0.79],
-    ['Finalizando...',0.93],
-    ['Upload concluído',1]
-  ];
-
-  const id=operationId;
-  const wait=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
-
-  for(let i=0;i<steps.length;i++){
-    if(id!==operationId) return false;
-
-    const [label,target]=steps[i];
-    const done=i===steps.length-1;
-
-    updateUploadProgress(
-      Math.round(target*100),
-      total,
-      label,
-      done ? 'Upload concluído' : type
-    );
-
-    const statusEl=
-      document.querySelector('#uploadProgress .upload-status') ||
-      document.querySelector('.upload-status');
-
-    if(statusEl){
-      statusEl.classList.remove('upload-status-enter','upload-status-pulse','upload-complete');
-      void statusEl.offsetWidth;
-      statusEl.classList.add(done?'upload-complete':'upload-status-enter');
-      if(!done) statusEl.classList.add('upload-status-pulse');
-    }
-
-    // Tempo suficiente para o usuário perceber cada etapa,
-    // sem deixar o upload artificialmente demorado.
-    await wait(done?550:320);
-  }
-
-  return true;
+async function simulateUpload(list,label='Upload'){
+ const total=Math.max(1,list.length);
+ for(let i=0;i<list.length;i++){
+  const file=list[i],name=file?.webkitRelativePath||file?.name||('Arquivo '+(i+1));
+  updateUploadProgress(i,total,name,label+' — preparando');
+  await new Promise(r=>setTimeout(r,Math.min(120,Math.max(30,1000/Math.sqrt(total)))));
+  updateUploadProgress(i+1,total,name,label+' — carregando'); await nextFrame();
+ }
+ updateUploadProgress(total,total,'Todos os arquivos foram processados.','Upload concluído');
+ await new Promise(r=>setTimeout(r,650));
 }
 function setupInfoCards(){
  const items=[['developerInfo','developerPopover'],['projectInfo','projectPopover']].map(([b,p])=>({button:document.getElementById(b),panel:document.getElementById(p)}));
@@ -1101,53 +1027,80 @@ document.getElementById('clear').onclick = clearProject;
 
 drop.addEventListener('drop',async event=>{
   if(busy)return;
-  const id=++operationId;busy=true;setLoadingState(false);resetUploadProgress();updateUploadProgress(0,1,'Preparando arquivos arrastados...','Preparando upload');
+
+  const id=++operationId;
+  busy=true;
+  setLoadingState(false);
+  resetUploadProgress();
+  updateUploadProgress(
+    0,1,
+    'Preparando arquivos arrastados...',
+    'Preparando upload'
+  );
+
   const items=Array.from(event.dataTransfer?.items||[]);
-  const collected=[];const progress={files:0};
+  const collected=[];
+  const progress={files:0};
 
   /*
     Tenta primeiro a API moderna de File System Access.
     Depois usa webkitGetAsEntry, muito útil em Chrome/Edge no PC.
   */
-  for(const item of items){
-    try{
-      if(typeof item.getAsFileSystemHandle === 'function'){
-        const handle = await item.getAsFileSystemHandle();
+  try{
+    for(const item of items){
+      try{
+        if(typeof item.getAsFileSystemHandle === 'function'){
+          const handle = await item.getAsFileSystemHandle();
 
-        if(handle?.kind === 'directory'){
-          await walkDirectoryHandle(handle,'',collected,progress,id);
-        }else if(handle?.kind === 'file'){
-          const file = await handle.getFile();
-          collected.push(file);
+          if(handle?.kind === 'directory'){
+            await walkDirectoryHandle(handle,'',collected,progress,id);
+          }else if(handle?.kind === 'file'){
+            const file = await handle.getFile();
+            collected.push(file);
+          }
+
+          continue;
         }
 
-        continue;
+        const entry = item.webkitGetAsEntry?.();
+
+        if(entry){
+          await walkEntry(entry,'',collected,progress,id);
+        }else{
+          const file = item.getAsFile?.();
+          if(file) collected.push(file);
+        }
+
+      }catch(error){
+        console.warn('Falha ao ler item arrastado:',error);
       }
-
-      const entry = item.webkitGetAsEntry?.();
-
-      if(entry){
-        await walkEntry(entry,'',collected,progress,id);
-      }else{
-        const file = item.getAsFile?.();
-        if(file) collected.push(file);
-      }
-
-    }catch(error){
-      console.warn(
-        'Falha ao ler item arrastado:',
-        error
-      );
     }
-  }
 
-  try{
     if(id!==operationId)return;
- const directFiles=Array.from(event.dataTransfer?.files||[]),received=collected.length?collected:directFiles;
- try{
-  if(received.length){await simulateUpload(received,'Upload');if(id!==operationId)return;addFiles(received);setLoadingState(false);msg('Upload concluído — '+countOriginalFiles()+' arquivo(s).');setTimeout(resetUploadProgress,1200);}
-  else{setLoadingState(false);msg('Não foi possível ler os arquivos arrastados.');}
- }finally{if(id===operationId)busy=false;}
+
+    const directFiles=Array.from(event.dataTransfer?.files||[]);
+    const received=collected.length?collected:directFiles;
+
+    if(received.length){
+      await simulateUpload(received,'Upload');
+      if(id!==operationId)return;
+
+      addFiles(received);
+      setLoadingState(false);
+      msg('Upload concluído — '+countOriginalFiles()+' arquivo(s).');
+      setTimeout(resetUploadProgress,1200);
+    }else{
+      setLoadingState(false);
+      msg('Não foi possível ler os arquivos arrastados.');
+    }
+
+  }catch(error){
+    console.error('Erro ao processar arquivos arrastados:',error);
+    setLoadingState(false);
+    msg('Não foi possível processar os arquivos arrastados.');
+  }finally{
+    if(id===operationId)busy=false;
+  }
 });
 
 async function walkEntry(entry,path,out,progress,id){
@@ -1208,13 +1161,36 @@ setupInfoCards();
  * ou navegadores que não disparam o evento como esperado.
  */
 (function initStartup(){
-  const finish=()=>setLoadingState(false);
-  if(document.readyState==='complete' || document.readyState==='interactive'){
-    setTimeout(finish,350);
-  }else{
-    document.addEventListener('DOMContentLoaded',()=>setTimeout(finish,350),{once:true});
-    setTimeout(finish,2500); // limite de segurança
-  }
+  let finished=false;
+
+  const finish=()=>{
+    if(finished)return;
+    finished=true;
+
+    const overlay=document.getElementById('startupLoading');
+    if(overlay){
+      overlay.classList.add('hide');
+      overlay.setAttribute('aria-hidden','true');
+    }
+
+    /*
+      A tela de instalação aparece somente DEPOIS da tela inicial.
+      Assim as duas telas nunca ficam sobrepostas durante a inicialização.
+    */
+    if(!isStandalone()){
+      setTimeout(showInstallScreen,180);
+    }
+  };
+
+  /*
+    Como este script fica no final do documento, o DOM já está disponível.
+    Não dependemos do evento "load", que pode ficar esperando recursos
+    externos e causar a aparência de carregamento infinito.
+  */
+  requestAnimationFrame(()=>setTimeout(finish,650));
+
+  /* Limite absoluto de segurança. */
+  setTimeout(finish,1800);
 })();
 
 
@@ -1265,6 +1241,14 @@ function updateInstallButton(){
 window.addEventListener('beforeinstallprompt',event=>{
   event.preventDefault();
   deferredInstallPrompt=event;
+
+  if(installUI.note && !isStandalone()){
+    installUI.note.textContent='A instalação está pronta. Toque em “Instalar SiteView” para continuar.';
+  }
+
+  if(!isStandalone()){
+    setTimeout(showInstallScreen,80);
+  }
 });
 
 installUI.button?.addEventListener('click',()=>{
@@ -1305,7 +1289,12 @@ window.addEventListener('appinstalled',()=>{
 });
 
 updateInstallButton();
-if(!isStandalone()) setTimeout(showInstallScreen,700);
+
+/*
+  A tela de instalação agora é aberta pelo initStartup(), depois da
+  apresentação inicial. O beforeinstallprompt também pode abri-la
+  quando o navegador disponibilizar a instalação.
+*/
 
 /* Service Worker: somente em HTTPS/localhost. */
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
