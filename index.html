@@ -8,8 +8,8 @@
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,system-ui,Arial;background:#080b12;color:#f5f7fb}
 body{overflow:auto}.app{min-height:100vh}.top{height:68px;border-bottom:1px solid #273044;background:#0d111b;display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:5}
 .brand{display:flex;align-items:center;gap:11px;font-weight:800}.mark{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,#6959ff,#38c7ff);font-size:19px}
-main{max-width:1050px;margin:auto;padding:35px 22px}.intro h1{margin:0;font-size:30px}.intro p{color:#929bb0;margin:8px 0 25px}
-.layout{display:grid;grid-template-columns:330px 1fr;gap:22px}.panel,.project{border:1px solid #273044;border-radius:18px;background:#101522}
+main{width:min(100% - 44px,1400px);max-width:1400px;margin:auto;padding:35px 0}.intro h1{margin:0;font-size:30px}.intro p{color:#929bb0;margin:8px 0 25px}
+.layout{display:grid;grid-template-columns:minmax(300px,340px) minmax(0,1fr);gap:22px;align-items:start}.panel,.project{border:1px solid #273044;border-radius:18px;background:#101522}
 .panel{padding:18px;height:max-content}.drop{border:1px dashed #4a5570;border-radius:15px;padding:25px 16px;text-align:center;transition:.2s}.drop.on{border-color:#8a7cff;background:#171632}
 .drop .ico{font-size:36px;margin-bottom:8px}.drop b{display:block;margin-bottom:6px}.drop small{display:block;color:#8f98ab;line-height:1.5;margin-bottom:15px}
 .btn{border:0;border-radius:10px;padding:11px 15px;font-weight:750;cursor:pointer}.primary{background:linear-gradient(135deg,#6959ff,#8a7cff);color:#fff}.ghost{background:#171d2b;color:#fff;border:1px solid #2b354b}
@@ -17,7 +17,7 @@ main{max-width:1050px;margin:auto;padding:35px 22px}.intro h1{margin:0;font-size
 .project{overflow:hidden}.thumb{height:190px;background:#0a0d14;display:grid;place-items:center}.mini{width:80%;height:72%;background:#eef1f7;border-radius:10px;overflow:hidden}.bar{height:20px;background:#222a39;padding:6px;display:flex;gap:5px}.dot{width:6px;height:6px;border-radius:50%;background:#8b94a7}.screen{height:100%;background:linear-gradient(135deg,#e7ebf3,#cbd3e1)}
 .info{padding:18px}.info h2{font-size:17px;margin:0 0 5px}.meta{color:#8f98ab;font-size:12px}.actions{display:flex;gap:9px;margin-top:16px}.actions .primary{flex:1}.empty{border:1px dashed #273044;border-radius:18px;min-height:300px;display:grid;place-items:center;text-align:center;color:#8f98ab}.empty div{max-width:390px;padding:25px}.empty strong{display:block;color:#fff;font-size:19px;margin-bottom:7px}
 .toast{position:fixed;right:16px;bottom:16px;background:#111827;border:1px solid #303a51;padding:10px 13px;border-radius:10px;font-size:12px;display:none;z-index:20}
-@media(max-width:760px){.layout{grid-template-columns:1fr}.top{padding:0 14px}main{padding:24px 14px}}
+@media(max-width:760px){.layout{grid-template-columns:1fr}.top{padding:0 14px}main{width:100%;padding:24px 14px}}
 
 .extra-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:22px}
 .extra-card{border:1px solid #273044;border-radius:15px;background:#101522;overflow:hidden}
@@ -46,6 +46,24 @@ main{max-width:1050px;margin:auto;padding:35px 22px}.intro h1{margin:0;font-size
 .progress-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;margin-bottom:8px}.progress-status{color:#fff;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.progress-percent{color:#8f98ab;font-variant-numeric:tabular-nums}
 .progress-track{height:7px;border-radius:999px;background:#20283a;overflow:hidden}.progress-fill{height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#6959ff,#38c7ff);transition:width .18s ease}
 .progress-file{margin-top:8px;color:#8f98ab;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.progress-done{margin-top:7px;color:#7ee7c4;font-size:11px;display:none}.progress-done.show{display:block}
+.upload-progress .progress-status,
+.upload-progress .progress-percent,
+.upload-progress .progress-file,
+.upload-progress .progress-done{
+  transition:opacity .25s ease,transform .3s cubic-bezier(.22,1,.36,1);
+}
+.upload-progress.status-changing .progress-status,
+.upload-progress.status-changing .progress-file{
+  animation:uploadStatusIn .3s cubic-bezier(.22,1,.36,1) both;
+}
+.upload-progress .progress-fill{
+  transition:width .45s cubic-bezier(.22,1,.36,1);
+}
+@keyframes uploadStatusIn{
+  from{opacity:0;transform:translateY(5px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
 @keyframes progressIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 @media(max-width:760px){.top-actions{gap:5px}.top-label{display:none}.top-icon-btn{padding:9px}.info-popover{top:72px;right:14px}}
 </style>
@@ -57,6 +75,107 @@ main{max-width:1050px;margin:auto;padding:35px 22px}.intro h1{margin:0;font-size
 <link rel="manifest" href="manifest.json">
 
 <style>
+
+/* =========================================================
+   VISUALIZAÇÃO INTERNA — abre sobre o painel, sem nova aba
+   ========================================================= */
+.preview-screen{
+  position:fixed;
+  inset:0;
+  z-index:800;
+  display:grid;
+  grid-template-rows:58px minmax(0,1fr);
+  background:#080b12;
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transform:translateY(10px) scale(.99);
+  transition:opacity .28s ease,visibility .28s ease,transform .32s cubic-bezier(.22,1,.36,1);
+}
+.preview-screen.show{
+  opacity:1;
+  visibility:visible;
+  pointer-events:auto;
+  transform:none;
+}
+.preview-head{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:0 16px 0 20px;
+  background:#0d111b;
+  border-bottom:1px solid #273044;
+}
+.preview-title{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:13px;
+  font-weight:800;
+}
+.preview-title span{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.preview-actions{display:flex;align-items:center;gap:8px;flex:none}
+.preview-close{display:flex;align-items:center;gap:8px}
+.preview-body{
+  position:relative;
+  min-height:0;
+  background:#fff;
+  overflow:hidden;
+}
+.preview-frame{
+  width:100%;
+  height:100%;
+  border:0;
+  display:block;
+  background:#fff;
+}
+.preview-loading{
+  position:absolute;
+  inset:0;
+  z-index:2;
+  display:grid;
+  place-items:center;
+  background:#080b12;
+  color:#fff;
+  transition:opacity .28s ease,visibility .28s ease;
+}
+.preview-loading.hide{
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+}
+.preview-loading-box{text-align:center}
+.preview-loading-box .loading-spinner{margin-bottom:13px}
+.preview-loading-sub{margin-top:5px;color:#8f98ab;font-size:12px}
+.preview-error{
+  position:absolute;
+  inset:0;
+  z-index:3;
+  display:none;
+  place-items:center;
+  background:#080b12;
+  color:#fff;
+  padding:24px;
+  text-align:center;
+}
+.preview-error.show{display:grid}
+.preview-error-box{max-width:560px}
+.preview-error-box h2{margin:0 0 8px;font-size:19px}
+.preview-error-box p{margin:0;color:#929bb0;font-size:12px;line-height:1.6}
+@media(max-width:600px){
+  .preview-head{padding:0 12px}
+  .preview-title .modern-icon{display:none}
+  .preview-close .top-label{display:none}
+}
+
 /* =========================================================
    INSTALAÇÃO PWA — tela e modal
    ========================================================= */
@@ -66,7 +185,7 @@ main{max-width:1050px;margin:auto;padding:35px 22px}.intro h1{margin:0;font-size
 .install-brand{display:flex;align-items:center;gap:12px;margin-bottom:22px}.install-brand .mark{flex:none}
 .install-card h2{margin:0 0 8px;font-size:25px}.install-card>p{margin:0 0 20px;color:#929bb0;line-height:1.6;font-size:13px}
 .install-list{display:grid;gap:10px;margin:18px 0 22px}.install-item{display:flex;gap:11px;align-items:flex-start;padding:12px;border:1px solid #273044;border-radius:13px;background:#0c1019;color:#c5ccda;font-size:12px;line-height:1.5}.install-item b{display:block;color:#fff;margin-bottom:2px}.install-check{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#172b2a;color:#7ee7c4;flex:none}
-.install-actions{display:flex;gap:9px}.install-actions .primary{flex:1}.install-note{margin-top:14px;color:#707b91;font-size:11px;line-height:1.5;text-align:center}
+.install-actions{display:flex;gap:9px}.install-actions .primary{flex:1;min-height:44px}.install-note{margin-top:14px;color:#707b91;font-size:11px;line-height:1.5;text-align:center}
 #installBtn{display:flex;align-items:center;gap:8px}
 .install-locked{filter:saturate(.7)}
 @media(max-width:600px){.install-card{padding:22px;border-radius:20px}.install-card h2{font-size:21px}.install-actions{flex-direction:column}}
@@ -90,7 +209,6 @@ main{max-width:1050px;margin:auto;padding:35px 22px}.intro h1{margin:0;font-size
   </div>
   <div class="install-actions">
    <button class="btn primary" id="confirmInstall" type="button">Instalar SiteView</button>
-   <button class="btn ghost" id="closeInstall" type="button">Voltar</button>
   </div>
   <div class="install-note" id="installNote">A instalação usa o mecanismo oficial de PWA do navegador quando disponível.</div>
  </div>
@@ -109,7 +227,7 @@ main{max-width:1050px;margin:auto;padding:35px 22px}.intro h1{margin:0;font-size
  </div>
 </header>
 <main>
- <section class="intro"><h1>Visualizador de projetos</h1><p>Carregue seu site e abra a visualização em uma página separada.</p></section>
+ <section class="intro"><h1>Visualizador de projetos</h1><p>Carregue seu site e abra a visualização em uma tela separada.</p></section>
  <div class="layout">
   <aside class="panel">
    <div class="drop" id="drop">
@@ -137,6 +255,43 @@ main{max-width:1050px;margin:auto;padding:35px 22px}.intro h1{margin:0;font-size
   <section id="area"></section>
  </div>
 </main>
+</div>
+
+<div class="preview-screen" id="previewScreen" aria-hidden="true">
+  <div class="preview-head">
+    <div class="preview-title">
+      <span class="modern-icon small" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="15" rx="2"/><path d="M3 9h18"/></svg>
+      </span>
+      <span id="previewTitle">Visualização do projeto</span>
+    </div>
+    <div class="preview-actions">
+      <button class="top-icon-btn preview-close" id="closePreview" type="button" title="Voltar ao painel">
+        <span class="modern-icon small" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+        </span>
+        <span class="top-label">Voltar ao painel</span>
+      </button>
+    </div>
+  </div>
+  <div class="preview-body">
+    <div class="preview-loading" id="previewLoading" aria-live="polite">
+      <div class="preview-loading-box">
+        <div class="loading-spinner"></div>
+        <div class="loading-title">Carregando projeto...</div>
+        <div class="preview-loading-sub" id="previewLoadingSub">Preparando a visualização</div>
+      </div>
+    </div>
+    <div class="preview-error" id="previewError">
+      <div class="preview-error-box">
+        <h2>Não foi possível visualizar o projeto</h2>
+        <p id="previewErrorText">Verifique se o projeto possui um index.html válido e se os caminhos dos arquivos estão corretos.</p>
+      </div>
+    </div>
+    <iframe class="preview-frame" id="previewFrame"
+      title="Visualização do projeto"
+      sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe>
+  </div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -378,15 +533,50 @@ function updateUploadProgress(current,total,name,status){
 }
 function resetUploadProgress(){if(!progressUI.box)return;progressUI.box.classList.remove('show');progressUI.done.classList.remove('show');progressUI.fill.style.width='0%';progressUI.percent.textContent='0%';}
 async function simulateUpload(list,label='Upload'){
- const total=Math.max(1,list.length);
- for(let i=0;i<list.length;i++){
-  const file=list[i],name=file?.webkitRelativePath||file?.name||('Arquivo '+(i+1));
-  updateUploadProgress(i,total,name,label+' — preparando');
-  await new Promise(r=>setTimeout(r,Math.min(120,Math.max(30,1000/Math.sqrt(total)))));
-  updateUploadProgress(i+1,total,name,label+' — carregando'); await nextFrame();
- }
- updateUploadProgress(total,total,'Todos os arquivos foram processados.','Upload concluído');
- await new Promise(r=>setTimeout(r,650));
+  const total=Math.max(1,list.length);
+  const stages=[
+    ['Lendo arquivos...',8],
+    ['Organizando arquivos...',22],
+    ['Estruturando arquivos...',38],
+    ['Montando estrutura...',52],
+    ['Verificando vírus...',68],
+    ['Verificando arquivos...',82],
+    ['Finalizando...',94],
+    ['Upload concluído',100]
+  ];
+
+  const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+
+  for(let i=0;i<stages.length;i++){
+    if(operationId && !busy)return;
+
+    const [status,pct]=stages[i];
+    const currentFile =
+      pct===100
+        ? 'Todos os arquivos foram processados.'
+        : (list[Math.min(
+            list.length-1,
+            Math.floor((pct/100)*list.length)
+          )]?.webkitRelativePath ||
+           list[Math.min(
+            list.length-1,
+            Math.floor((pct/100)*list.length)
+          )]?.name ||
+           'Processando arquivos...');
+
+    updateUploadProgress(pct,total,currentFile,status);
+
+    progressUI.box?.classList.remove('status-changing');
+    void progressUI.box?.offsetWidth;
+    progressUI.box?.classList.add('status-changing');
+
+    if(pct<100){
+      await sleep(300);
+      await nextFrame();
+    }else{
+      await sleep(600);
+    }
+  }
 }
 function setupInfoCards(){
  const items=[['developerInfo','developerPopover'],['projectInfo','projectPopover']].map(([b,p])=>({button:document.getElementById(b),panel:document.getElementById(p)}));
@@ -889,100 +1079,109 @@ async function buildHtml(index, visited = new Set(), sharedCache = new Map()){
 
 /* ---------- Visualização ---------- */
 
-async function openProject(index){
-  if(busy) return;
+let previewObjectUrl = null;
+
+const previewUI={
+  screen:document.getElementById('previewScreen'),
+  frame:document.getElementById('previewFrame'),
+  loading:document.getElementById('previewLoading'),
+  loadingSub:document.getElementById('previewLoadingSub'),
+  title:document.getElementById('previewTitle'),
+  error:document.getElementById('previewError'),
+  errorText:document.getElementById('previewErrorText')
+};
+
+function showPreview(index){
+  if(!previewUI.screen)return;
+
+  previewUI.screen.classList.add('show');
+  previewUI.screen.setAttribute('aria-hidden','false');
+  previewUI.loading.classList.remove('hide');
+  previewUI.error.classList.remove('show');
+  previewUI.title.textContent=projectName+' — Visualização';
+  previewUI.loadingSub.textContent='Preparando a visualização';
+  previewUI.frame.srcdoc='';
+}
+
+function closePreview(){
+  if(!previewUI.screen)return;
+
+  previewUI.screen.classList.remove('show');
+  previewUI.screen.setAttribute('aria-hidden','true');
 
   /*
-    A nova aba é criada imediatamente, antes de qualquer await.
-    Isso é essencial no PC para evitar bloqueio de popup.
+    Limpa o iframe depois da transição para interromper scripts/áudio
+    do projeto e evitar consumo desnecessário de memória.
   */
-  const win = window.open('about:blank', '_blank');
+  setTimeout(()=>{
+    if(!previewUI.screen.classList.contains('show')){
+      previewUI.frame.srcdoc='';
+    }
+  },320);
+}
 
-  if(!win){
-    msg('O navegador bloqueou a nova aba. Permita pop-ups para o SiteView.');
-    return;
-  }
+document.getElementById('closePreview')?.addEventListener('click',closePreview);
 
-  busy = true;
+async function openProject(index){
+  if(busy)return;
+  if(!requireInstalled())return;
+
+  busy=true;
+  showPreview(index);
 
   try{
-    win.document.open();
-    win.document.write(`
-      <!doctype html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width,initial-scale=1">
-        <title>Carregando...</title>
-        <style>
-          html,body{
-            height:100%;
-            margin:0;
-            background:#080b12;
-            color:#fff;
-            font-family:system-ui;
-            display:grid;
-            place-items:center
-          }
-          div{text-align:center}
-          span{
-            display:block;
-            width:28px;
-            height:28px;
-            border:3px solid #30384b;
-            border-top-color:#8a7cff;
-            border-radius:50%;
-            animation:r .8s linear infinite;
-            margin:0 auto 14px
-          }
-          @keyframes r{to{transform:rotate(360deg)}}
-        </style>
-      </head>
-      <body>
-        <div><span></span>Carregando projeto...</div>
-      </body>
-      </html>
-    `);
-    win.document.close();
+    previewUI.loadingSub.textContent='Lendo arquivos do projeto...';
+    await nextFrame();
 
-    msg('Preparando o projeto...');
+    const html=await buildHtml(index);
 
-    const html = await buildHtml(index);
-
-    if(win.closed){
-      msg('A janela de visualização foi fechada.');
-      return;
+    if(!html || !String(html).trim()){
+      throw new Error('O index.html está vazio.');
     }
 
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
-    win.document.title = projectName + ' — Visualização';
+    previewUI.loadingSub.textContent='Montando a página...';
+    await nextFrame();
 
-    try{
-      win.focus();
-    }catch(_){}
+    /*
+      srcdoc mantém a visualização dentro do próprio SiteView.
+      Não abre nova aba/janela e deixa o painel por baixo do overlay.
+    */
+    previewUI.frame.srcdoc=html;
+
+    /*
+      O evento load confirma que o documento do projeto foi montado.
+      Um limite de segurança impede que a tela de carregamento fique presa
+      se algum recurso do projeto impedir o evento esperado.
+    */
+    let loaded=false;
+
+    const finish=()=>{
+      if(loaded)return;
+      loaded=true;
+      previewUI.loading.classList.add('hide');
+    };
+
+    previewUI.frame.addEventListener('load',finish,{once:true});
+
+    setTimeout(finish,2200);
+
+    previewUI.frame.addEventListener('error',()=>{
+      if(loaded)return;
+      previewUI.errorText.textContent='O navegador não conseguiu montar a visualização deste projeto.';
+      previewUI.error.classList.add('show');
+      previewUI.loading.classList.add('hide');
+    },{once:true});
 
   }catch(error){
-    console.error('Erro ao montar projeto:', error);
-
-    if(!win.closed){
-      try{
-        win.document.open();
-        win.document.write(`
-          <div style="font-family:system-ui;padding:30px">
-            <h2>Não foi possível carregar o projeto.</h2>
-            <p>Verifique se o projeto possui um <b>index.html</b> válido
-            e se os caminhos dos arquivos estão corretos.</p>
-          </div>
-        `);
-        win.document.close();
-      }catch(_){}
-    }
-
-    msg('Erro ao abrir o projeto. Verifique o index.html e os caminhos dos arquivos.');
+    console.error('Erro ao montar projeto:',error);
+    previewUI.loading.classList.add('hide');
+    previewUI.errorText.textContent=
+      error?.message ||
+      'Verifique se o projeto possui um index.html válido e se os caminhos dos arquivos estão corretos.';
+    previewUI.error.classList.add('show');
+    msg('Não foi possível abrir a visualização do projeto.');
   }finally{
-    busy = false;
+    busy=false;
   }
 }
 
@@ -1246,7 +1445,9 @@ window.addEventListener('beforeinstallprompt',event=>{
     installUI.note.textContent='A instalação está pronta. Toque em “Instalar SiteView” para continuar.';
   }
 
-  if(!isStandalone()){
+  if(!isStandalone() && !document.getElementById('startupLoading')?.classList.contains('hide')){
+    // A tela de instalação será aberta pelo fluxo de inicialização.
+  }else if(!isStandalone()){
     setTimeout(showInstallScreen,80);
   }
 });
@@ -1258,8 +1459,6 @@ installUI.button?.addEventListener('click',()=>{
   }
   showInstallScreen();
 });
-
-installUI.close?.addEventListener('click',hideInstallScreen);
 
 installUI.confirm?.addEventListener('click',async()=>{
   if(deferredInstallPrompt){
@@ -1283,9 +1482,32 @@ installUI.confirm?.addEventListener('click',async()=>{
 
 window.addEventListener('appinstalled',()=>{
   deferredInstallPrompt=null;
-  hideInstallScreen();
-  msg('SiteView instalado com sucesso.');
+  installUI.note.textContent='Instalação concluída. Abra o SiteView pelo aplicativo instalado para continuar.';
   updateInstallButton();
+
+  const verifyStandalone=()=>{
+    if(isStandalone()){
+      hideInstallScreen();
+      msg('SiteView instalado com sucesso.');
+    }
+  };
+
+  verifyStandalone();
+  setTimeout(verifyStandalone,500);
+  setTimeout(verifyStandalone,1500);
+});
+
+const standaloneMedia=window.matchMedia('(display-mode: standalone)');
+standaloneMedia.addEventListener?.('change',()=>{
+  updateInstallButton();
+  if(standaloneMedia.matches) hideInstallScreen();
+});
+
+document.addEventListener('visibilitychange',()=>{
+  if(isStandalone()){
+    updateInstallButton();
+    hideInstallScreen();
+  }
 });
 
 updateInstallButton();

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'siteview-shell-v1-4';
+const CACHE_NAME = 'siteview-shell-v1-5';
 const APP_SHELL = [
   './index.html',
   './manifest.json',
